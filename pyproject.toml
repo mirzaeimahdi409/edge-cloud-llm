@@ -7,6 +7,7 @@ dependencies = [
     "torch",
     "transformers",
     "pandas",
+    "matplotlib",
     "edge_sim_py @ git+https://github.com/EdgeSimPy/EdgeSimPy.git",
 ]
 

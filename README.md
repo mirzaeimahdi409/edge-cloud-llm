@@ -53,6 +53,17 @@ k ∈ {4, 6, 8} over the sample prompts, writing `results/sweep.csv` and
 `results/sweep.json`. Override the grid or prompts by calling
 `edge_cloud_llm.evaluation.run_sweep(...)` directly.
 
+## Plotting the results (section 13, optional)
+
+```bash
+PYTHONPATH=src python scripts/plot_results.py
+```
+
+Reads `results/comparison.csv` and `results/sweep.csv` (run the two scripts
+above first) and writes PNG charts to `results/plots/`: latency and switch
+count for always-edge vs. threshold policy, and a mean-latency /
+mean-switch-count heatmap over the τ/k grid.
+
 ## Module layout
 
 Mirrors the table in CLAUDE.md section 6:
