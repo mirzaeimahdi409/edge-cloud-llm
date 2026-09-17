@@ -1,0 +1,70 @@
+# edge-cloud-llm
+
+Thesis prototype: adaptive confidence-driven edge-cloud LLM inference. See
+[`CLAUDE.md`](CLAUDE.md) for the full spec — this file only covers how to run
+what is here.
+
+## Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+`EdgeSimPy` is pulled from GitHub (not on PyPI) via the `edge_sim_py`
+dependency in `pyproject.toml`; it needs network access to
+`github.com/EdgeSimPy/EdgeSimPy` the first time it's installed.
+
+The edge/cloud models (`Qwen/Qwen2.5-0.5B-Instruct` and
+`Qwen/Qwen2.5-1.5B-Instruct`, section 15's default pair) download from the
+Hugging Face Hub the first time they're used and are then cached locally.
+
+## Running the tests
+
+```bash
+pytest -q                              # everything
+pytest -q --ignore=tests/test_model_backend.py --ignore=tests/test_e2e.py
+                                        # unit + fake-backend tests only (fast, offline)
+```
+
+`test_model_backend.py` and `test_e2e.py` load the real models and are slow
+on first run (model download); everything else uses a deterministic fake
+backend (`tests/fakes.py`) and runs in a few seconds.
+
+## Running the comparison experiment (step 9)
+
+```bash
+PYTHONPATH=src python scripts/run_evaluation.py
+```
+
+Runs "always-edge" vs. the threshold policy over a few sample prompts and
+writes `results/comparison.csv` and `results/comparison.json` (latency,
+tokens generated, switch count, generated text per prompt/policy).
+
+## Module layout
+
+Mirrors the table in CLAUDE.md section 6:
+
+| Module | Responsibility |
+|---|---|
+| `model_backend.py` | `ModelBackend` protocol + `EdgeModelAdapter`/`CloudModelAdapter` |
+| `confidence.py` | Confidence Extractor (max-prob / entropy / margin, with temperature calibration) |
+| `policy.py` | Decision Policy Engine (sliding-window threshold) |
+| `communication.py` | Sentence/clause-boundary check used to gate re-prefill switches |
+| `fault_tolerance.py` | Cloud call timeout + fallback to edge |
+| `observability.py` | Structured per-step event log, dumped to CSV/JSON |
+| `middleware.py` | The generation loop that wires all of the above together |
+| `edgesim_scenario.py` | Runs the middleware inside an EdgeSimPy network scenario |
+| `evaluation.py` | The always-edge vs. threshold-policy comparison (used by `scripts/run_evaluation.py`) |
+
+## Known limitations / open decisions (section 15)
+
+- Only `always-edge` is implemented as a comparison baseline so far; the
+  literature baselines in CLAUDE.md section 11 (RASOUL, EdgeShard, CE-CoLLM,
+  SLED, QoS-Aware Routing, ...) are out of scope for this pass.
+- No temperature-scaling calibration procedure has been run yet — the
+  calibration hook (`ConfidenceExtractor.calibration`) exists but defaults to
+  `temperature=1.0` for both backends.
+- The τ/k parameter sweep (section 11) has not been run; `threshold` and
+  `window_size` are currently fixed constructor arguments.
