@@ -11,7 +11,7 @@ from typing import Callable, TypeVar
 
 T = TypeVar("T")
 
-DEFAULT_CLOUD_TIMEOUT_SECONDS = 5.0
+DEFAULT_CLOUD_TIMEOUT_SECONDS = 20.0
 
 
 class CloudUnavailableError(Exception):
@@ -21,12 +21,21 @@ class CloudUnavailableError(Exception):
 def run_with_timeout(
     call: Callable[[], T], timeout_seconds: float = DEFAULT_CLOUD_TIMEOUT_SECONDS
 ) -> T:
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(call)
-        try:
-            return future.result(timeout=timeout_seconds)
-        except Exception as exc:  # noqa: BLE001 - any failure means "cloud unavailable"
-            raise CloudUnavailableError(str(exc)) from exc
+    # Deliberately not `with ThreadPoolExecutor() as executor:` — the context
+    # manager's __exit__ calls shutdown(wait=True), which blocks until the
+    # submitted call actually finishes even after future.result() has timed
+    # out, silently turning the "timeout" into a no-op. shutdown(wait=False)
+    # lets the (still-running) worker thread finish on its own and be
+    # garbage-collected once done; its result is simply discarded.
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(call)
+    try:
+        result = future.result(timeout=timeout_seconds)
+    except Exception as exc:  # noqa: BLE001 - any failure means "cloud unavailable"
+        executor.shutdown(wait=False)
+        raise CloudUnavailableError(str(exc)) from exc
+    executor.shutdown(wait=False)
+    return result
 
 
 def call_cloud_with_fallback(
