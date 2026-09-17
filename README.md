@@ -42,6 +42,17 @@ Runs "always-edge" vs. the threshold policy over a few sample prompts and
 writes `results/comparison.csv` and `results/comparison.json` (latency,
 tokens generated, switch count, generated text per prompt/policy).
 
+## Running the τ/k sweep (section 11)
+
+```bash
+PYTHONPATH=src python scripts/run_sweep.py
+```
+
+Runs every combination of threshold τ ∈ {0.2, 0.5, 0.8} and window size
+k ∈ {4, 6, 8} over the sample prompts, writing `results/sweep.csv` and
+`results/sweep.json`. Override the grid or prompts by calling
+`edge_cloud_llm.evaluation.run_sweep(...)` directly.
+
 ## Module layout
 
 Mirrors the table in CLAUDE.md section 6:
@@ -56,7 +67,7 @@ Mirrors the table in CLAUDE.md section 6:
 | `observability.py` | Structured per-step event log, dumped to CSV/JSON |
 | `middleware.py` | The generation loop that wires all of the above together |
 | `edgesim_scenario.py` | Runs the middleware inside an EdgeSimPy network scenario |
-| `evaluation.py` | The always-edge vs. threshold-policy comparison (used by `scripts/run_evaluation.py`) |
+| `evaluation.py` | The always-edge vs. threshold-policy comparison and the τ/k sweep (used by `scripts/run_evaluation.py` / `scripts/run_sweep.py`) |
 
 ## Known limitations / open decisions (section 15)
 
@@ -66,5 +77,3 @@ Mirrors the table in CLAUDE.md section 6:
 - No temperature-scaling calibration procedure has been run yet — the
   calibration hook (`ConfidenceExtractor.calibration`) exists but defaults to
   `temperature=1.0` for both backends.
-- The τ/k parameter sweep (section 11) has not been run; `threshold` and
-  `window_size` are currently fixed constructor arguments.
