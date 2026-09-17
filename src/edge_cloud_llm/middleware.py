@@ -22,6 +22,7 @@ DEFAULT_MAX_NEW_TOKENS = 64
 class GenerationResult:
     text: str
     switch_count: int
+    cloud_fallback_count: int
     log: EventLog
 
 
@@ -60,6 +61,7 @@ class MiddlewareCore:
             last_token_text = current_backend.decode([token_ids[-1]])
             can_switch = desired_route != current_route and is_switch_boundary(last_token_text)
             switched = False
+            cloud_fallback = False
 
             if can_switch and desired_route is Route.CLOUD:
                 context_text = prompt + generated_text
@@ -68,6 +70,7 @@ class MiddlewareCore:
                     current_backend, current_route, switched = self._cloud, Route.CLOUD, True
                 except CloudUnavailableError:
                     result = current_backend.next_token(result.state)
+                    cloud_fallback = True
 
             elif can_switch and desired_route is Route.EDGE:
                 context_text = prompt + generated_text
@@ -80,6 +83,7 @@ class MiddlewareCore:
                 except CloudUnavailableError:
                     result = self._edge.prefill(prompt + generated_text)
                     current_backend, current_route = self._edge, Route.EDGE
+                    cloud_fallback = True
 
             else:
                 result = current_backend.next_token(result.state)
@@ -89,7 +93,14 @@ class MiddlewareCore:
 
             score = self._confidence.score(result.logits)
             desired_route = self._policy.observe(score)
-            log.record(StepEvent(step, current_route.value, result.token_id, score, switched))
+            log.record(
+                StepEvent(step, current_route.value, result.token_id, score, switched, cloud_fallback)
+            )
             step += 1
 
-        return GenerationResult(text=generated_text, switch_count=log.switch_count(), log=log)
+        return GenerationResult(
+            text=generated_text,
+            switch_count=log.switch_count(),
+            cloud_fallback_count=log.cloud_fallback_count(),
+            log=log,
+        )

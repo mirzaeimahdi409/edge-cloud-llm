@@ -17,6 +17,7 @@ class StepEvent:
     token_id: int
     confidence: float
     switched: bool
+    cloud_fallback: bool = False
 
 
 class EventLog:
@@ -31,6 +32,9 @@ class EventLog:
 
     def switch_count(self) -> int:
         return sum(1 for event in self._events if event.switched)
+
+    def cloud_fallback_count(self) -> int:
+        return sum(1 for event in self._events if event.cloud_fallback)
 
     def to_json(self, path: str | Path) -> None:
         Path(path).write_text(

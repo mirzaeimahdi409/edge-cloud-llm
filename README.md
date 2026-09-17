@@ -98,7 +98,17 @@ Mirrors the table in CLAUDE.md section 6:
   (prompt, τ, k) config produced switch-count-1 runs anywhere from ~6s to
   ~125s across separate script invocations. The switching decision logic
   itself is deterministic (greedy decoding, no randomness); the variance
-  comes from the timeout racing real inference time under load.
+  comes from the timeout racing real inference time under load. Confirmed
+  with `scripts/audit_run.py`: re-running the exact same config back-to-back
+  with no other jobs competing for CPU gave near-identical latency and
+  `cloud_fallback_count=0` both times — the earlier variance was
+  environmental (background CPU contention), not the policy logic.
+- Every `StepEvent` now carries a `cloud_fallback` flag (and
+  `GenerationResult`/CSV rows a `cloud_fallback_count`), set whenever
+  `run_with_timeout` actually raised and the middleware fell back to edge.
+  Without it, a step where no switch was attempted and a step where a cloud
+  call failed and fell back looked identical in the log — this makes the two
+  distinguishable when auditing latency numbers.
 - Section 11 asks for "several repeated runs to report a confidence
   interval" — `run_comparison`/`run_sweep` currently do a single run per
   config, not repeated trials with mean/CI. Given the run-to-run variance

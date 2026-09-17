@@ -56,6 +56,7 @@ class ComparisonRow:
     latency_seconds: float
     tokens_generated: int
     switch_count: int
+    cloud_fallback_count: int
     text: str
 
 
@@ -87,6 +88,7 @@ def run_comparison(
                     latency_seconds=latency,
                     tokens_generated=len(result.log.events()),
                     switch_count=result.switch_count,
+                    cloud_fallback_count=result.cloud_fallback_count,
                     text=result.text,
                 )
             )
@@ -101,6 +103,7 @@ class SweepRow:
     latency_seconds: float
     tokens_generated: int
     switch_count: int
+    cloud_fallback_count: int
     text: str
 
 
@@ -135,6 +138,7 @@ def run_sweep(
                         latency_seconds=latency,
                         tokens_generated=len(result.log.events()),
                         switch_count=result.switch_count,
+                        cloud_fallback_count=result.cloud_fallback_count,
                         text=result.text,
                     )
                 )
